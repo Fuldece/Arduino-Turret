@@ -5,7 +5,8 @@ import cv2 as cv
 import numpy as np
 import serial
 import argparse
-
+import time
+import json
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video",
@@ -16,14 +17,14 @@ args = vars(ap.parse_args())
 
 kernel = np.ones((5,5),np.uint8)
 
-centerX = int(525/2)
-centerY = int(525/2) 
+centerX = int(250)
+centerY = int(250) 
 # Take input from webcam
 cap = cv2.VideoCapture(0)
  
 # Reduce the size of video to 320x240 so rpi can process faster
-cap.set(3,640)
-cap.set(4,480)
+cap.set(3,500)
+cap.set(4,500)
  
 def nothing(x):
     pass
@@ -42,7 +43,9 @@ counter = 0
 direction = ""
 
 # configure the serial connections (the parameters differs on the device you are connecting to)
-serialConnection = serial.Serial('\\\\.\\COM7', 9600)
+ser = serial.Serial('\\\\.\\COM7', 9600)
+time.sleep(2)
+print("Connection to arduino...")
 
 # Creating track bar for min and max for hue, saturation and value
 # You can adjust the defaults as you like
@@ -64,10 +67,6 @@ cv2.createTrackbar('vmax', 'ValComp',255,255,nothing)
 # vmn = 186
 # vmx = 255
 
-# Write the output of the given X and Y cordinates to the arduino
-   # output = "Location:".format(str(int(round(i[0])), ":", str(int(round(i[1])
-   # print ("output = '") + output + "'"
-   # serial Connection.write(output)
 
 while(1):
  
@@ -115,13 +114,20 @@ while(1):
                 # If the ball is close, draw it in green
                 if int(round(i[2])) > 35:
                     print("Location:", str(int(round(i[0]))), ":", str(int(round(i[1]))))
+                    x = str(int(round(i[0])))
+                    y = str(int(round(i[1])))
                     cv2.circle(frame,(int(round(i[0])),int(round(i[1]))),int(round(i[2])),(0,255,0),5)
                     cv2.circle(frame,(int(round(i[0])),int(round(i[1]))),2,(0,255,0),10)
+
+                    data = "Location".format(x,y)
+                    ser.write(data.encode())
+                    
                 # else draw it in red
                 elif int(round(i[2])) < 30:
                     cv2.circle(frame,(int(round(i[0])),int(round(i[1]))),int(round(i[2])),(0,0,255),5)
                     cv2.circle(frame,(int(round(i[0])),int(round(i[1]))),2,(0,0,255),10)
                     buzz = 1
+
                                                                    
     #Show the result in frames
     cv2.imshow('HueComp',hthresh)
@@ -137,5 +143,5 @@ while(1):
         break
  
 cap.release()
- 
+serial.release()
 cv2.destroyAllWindows()
